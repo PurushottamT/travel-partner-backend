@@ -3,6 +3,8 @@ import bcrypt from "bcrypt";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt";
 import { verifyRefreshToken } from "../utils/jwt"; // Added missing import for verifyRefreshToken
 import User from "../models/User";
+import dotenv from "dotenv";
+dotenv.config();
 
 // REGISTER
 export const register = async (
@@ -65,10 +67,16 @@ export const login = async (
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: "/api/auth/refresh",
+      sameSite: "lax", // or "none" if frontend/backend run on different domains
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax", // or "none" if frontend/backend run on different domains
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     res.status(200).json({
       message: "Login successful",
       accessToken,
@@ -83,6 +91,32 @@ export const login = async (
   }
 };
 
+//User is me
+export const getMe = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log("userId in getMe");
+    const userId = req.currentUser?.id;
+    console.log(userId, "userId in getMe");
+
+    if (!userId) {
+      console.log("Unauthorized access attempt");
+      res.status(401).json({ message: "Unauthorized" });
+      return;
+    }
+
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    res.status(200).json({ user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+    return;
+  }
+};
 // LOGOUT
 export const logout = async (
   req: Request,

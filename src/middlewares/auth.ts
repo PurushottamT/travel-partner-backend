@@ -1,25 +1,43 @@
+// src/middlewares/auth.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+
+// Extend Request interface
+interface DecodedToken {
+  id: string;
+  role: string;
+}
 
 export const authenticate = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
-  const token =
-    req.cookies["accessToken"] || req.headers.authorization?.split(" ")[1];
-
-  if (!token) return res.status(401).json({ message: "Access token missing" });
-
+): void => {
   try {
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET!);
-    if (typeof decoded === "object" && "id" in decoded && "role" in decoded) {
-      req.currentUser = decoded as { id: string; role: string }; // Replace 'Role' with 'string' or import/define 'Role'
-    } else {
-      throw new Error("Invalid token payload");
+    const token =
+      req.cookies?.accessToken ||
+      (req.headers.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization.split(" ")[1]
+        : null);
+
+    if (!token) {
+      res.status(401).json({ message: "Access token missing" });
+      return;
     }
-    next();
+    console.log("Received token:", token);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as DecodedToken;
+    console.log("Decoded token:", decoded);
+    // @ts-ignore - extend request
+    req.currentUser = {
+      id: decoded.id,
+      role: decoded.role,
+    };
+    console.log("Authenticated user:", req.currentUser);
+
+    return next(); // ✅ proceed
   } catch (error) {
-    res.status(401).json({ message: "Invalid token" });
+    res.status(403).json({ message: "Invalid or expired token" });
+    return;
   }
 };

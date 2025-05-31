@@ -1,10 +1,15 @@
 import jwt from "jsonwebtoken";
 import { IUser } from "../models/User";
+import dotenv from "dotenv";
+dotenv.config();
 
-const accessSecret = process.env.ACCESS_TOKEN_SECRET!;
+const accessSecret = process.env.JWT_SECRET!;
 const refreshSecret = process.env.REFRESH_TOKEN_SECRET!;
 
 export const generateAccessToken = (user: IUser) => {
+  if (!accessSecret) {
+    throw new Error("JWT secret is not defined");
+  }
   return jwt.sign({ id: user._id, role: user.role }, accessSecret, {
     expiresIn: "15m",
   });
