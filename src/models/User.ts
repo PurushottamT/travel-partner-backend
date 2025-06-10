@@ -15,6 +15,7 @@ export interface IUser extends Document {
   password: string;
   role: Role;
   refreshToken?: string;
+  status: boolean;
 }
 
 const userSchema = new mongoose.Schema<IUser>(
@@ -30,6 +31,7 @@ const userSchema = new mongoose.Schema<IUser>(
       default: "user",
     },
     refreshToken: { type: String },
+    status: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
